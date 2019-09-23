@@ -324,7 +324,11 @@ void GLApplication::drawPathSpline() {
 
 Vector3 GLApplication::rotatePlane(const Vector3 &p,const Vector3 &n) {
     Vector3 result;
+    Matrix4 matrix; // Matrice homogène qui va transformer le P du plan (x,y) au point dans le plan de la direction orthogonale de la section
+    matrix.setRotation(Vector3(0,0,1), n); // seul axe des Z spécifié
 
+    // transformation du point par la matrice homogène pour chgmt repère
+    result = matrix.transformPoint(p);
     return result;
 }
 
@@ -371,14 +375,31 @@ void GLApplication::extrudeLine() {
     float y; // coordonnées Y de section
     float z; // coordonnées Z de path
 
+    int nextPathIdx = 0; // index du point suivant du _path (pour calculer le segment à appliquer en rotatePlane)
     for(Vector3 ptPath : _path) {
-        z = ptPath.z();
+        // Commenter pour rotatePlane
+        //z = ptPath.z();
         for(Vector2 ptSection : _section) {
             x = ptSection.x();
             y = ptSection.y();
-            Vector3 ptExtrusion = Vector3(x,y,z);
-            _extrusion.push_back(ptExtrusion);
+
+            //Vector3 ptExtrusion = Vector3(x,y,z); // ancien ajout du point d'extrusion
+
+            // Point p, situé dans le plan (x,y)
+            Vector3 p = Vector3(x, y, 0);
+
+            // Segment du path
+            Vector3 n = _path[nextPathIdx] - ptPath;
+
+            // Obtenir point p après changement de repère
+            Vector3 extru = rotatePlane(p, ptPath);
+            _extrusion.push_back(ptPath + extru);
         }
+        nextPathIdx++;
+        // terminer la boucle si le pointeur courant du foreach arrive au dernier point du _path
+//        if(nextPathIdx == _path.size()) {
+//            break;
+//        }
     }
 }
 
