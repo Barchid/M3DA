@@ -37,7 +37,7 @@ macx {
 win32 {
   CONFIG += console
   DEFINES+=GLEW_STATIC
-  LIBS+=-lglew32s
+#  LIBS+=-lglew32s
   DEFINES+=_STDCALL_SUPPORTED
   LIBS+= -lopengl32
 }

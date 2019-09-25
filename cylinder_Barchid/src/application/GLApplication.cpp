@@ -236,10 +236,29 @@ void GLApplication::pathDefault() {
     _path.clear();
     _path.push_back(Vector3(-2,0,-2));
     _path.push_back(Vector3(2,0,2));
+
+    // Q8 : remplacer le pathDefault par ça
+    _path.clear();
+    _path.push_back(Vector3(-2,0,-2));
+    _path.push_back(Vector3(0,0,2));
+    _path.push_back(Vector3(2,0,-1));
 }
 
 void GLApplication::pathCircle() {
+    _path.clear();
+    // En utilisant la théorie ici https://www.mathopenref.com/coordparamcircle.html
+    float nbPoints = 25; // nombre de points voulus pour tracer le cercle
+    float x,z; // coordonnées des points à trouver (on place le cercle en profondeur d'où z)
+    float t = -1; // angle du point à trouver par rapport au centre du cercle
 
+    for(t = -1; t <= 2*M_PI;t+=(2*M_PI)/nbPoints) {
+        // application de la formule
+        x = cos(t);
+        z = sin(t);
+
+        // ajout dans path
+        _path.push_back(Vector3(x,0,z));
+    }
 
 }
 
@@ -335,33 +354,102 @@ Vector3 GLApplication::rotatePlane(const Vector3 &p,const Vector3 &n) {
 
 
 Vector3 GLApplication::pointSpline(double tNormalized) {
-    Vector3 result;
+    // Calculer le point de la courbe C(t) du path
+    Vector3 Ht; // point H(t) de la courbe
+    unsigned int n = _path.size();
+    // Trouver le point du path correspondant au t en paramètre (en d'autres termes, il faut trouver le bon i pour _path[i]
+    // on sait que t = i * 1/(n-1)
+    // on adapte et on obtient que i = t / (1/(n-1)) = t * (n-1)
+    unsigned int i = tNormalized * (n-1);
+    double t = tNormalized * (n-1) - i;
 
-    return result;
+    // Définir P0, P1 et T0, T1
+    Vector3 P0 = _path[i];
+    Vector3 P1 = _path[i+1];
+    Vector3 T0 = tangentPathLine(i);
+    //    T0 = T0.normalize();
+    Vector3 T1 = tangentPathLine(i+1);
+    //    T1 = T1.normalize();
+
+    // Calculer H(t) = t³(2P0−2P1+T0+T1)+t²*(−3P0+3P1−2T0−T1)+tT0+P0
+    Ht = pow(t, 3) * (2*P0-2*P1+T0+T1) + pow(t, 2) * (-3*P0+3*P1-2*T0-T1) + t * T0 + P0;
+    return Ht;
 }
 
 
 Vector3 GLApplication::tangentPathSpline(double tNormalized) {
-    Vector3 result;
+    Vector3 result; // expression de la derivee en t P'(t) pour obtenir la tangente en P(t)
+    // Comme pour pointSpline, il faut trouver les P0, P1, T0 et T1
+    // Donc, on copie-colle le code pour retrouver ces paramètres :
 
+    unsigned int n = _path.size();
+    // Trouver le point du path correspondant au t en paramètre (en d'autres termes, il faut trouver le bon i pour _path[i]
+    // on sait que t = i * 1/(n-1)
+    // on adapte et on obtient que i = t / (1/(n-1)) = t * (n-1)
+    unsigned int i = tNormalized * (n-1);
+    double t = tNormalized * (n-1) - i;
+
+    // Définir P0, P1 et T0, T1
+    Vector3 P0 = _path[i];
+    Vector3 P1 = _path[i+1];
+    Vector3 T0 = tangentPathLine(i);
+    Vector3 T1 = tangentPathLine(i+1);
+
+    // Appliquer formule dérivée d'une hermite
+    // H'(t) = 3t²(2P0−2P1+T0+T1) + 2t*(−3P0+3P1−2T0−T1) + T0
+    result = 3*pow(t, 2)*(2*P0-2*P1+T0+T1) + 2*t*(-3*P0+3*P1-2*T0-T1) + T0;
     return result;
 }
 
 
 
 Vector3 GLApplication::tangentPathLine(unsigned int i) {
-    Vector3 result;
+    Vector3 directionOrthogonale; // la direction orthogonale à trouver
 
+    // On cherche la direction orthogonale en chaque point courant du path situé à _path[i]
 
-    return result;
+    // SI [point courant du path est le premier point]
+    if(i == 0) {
+        // la direction orthogonale est la direction du premier segment
+        directionOrthogonale = _path[1] - _path[0];
+    }
+    // SINON SI [point courant du path est le dernier point du path]
+    else if (i == _path.size() -1) {
+        // la direction orthogonale est la direction du dernier segment
+        directionOrthogonale = _path[_path.size() - 1] - _path[_path.size() - 2];
+    }
+    // SINON (le point courant du path est au milieu)
+    else {
+        // la direction orthogonale est le vecteur allant de i-1 à i+1
+        directionOrthogonale = _path[i+1] - _path[i-1];
+    }
+    // La tangente est très grande du coup la spline essaye de rattraper le coup
+    // Donc on la réduit en multipliant par 0.4 pour que ça donne un rendu convaincant (c'est une constante empirique)
+    directionOrthogonale *= 0.4;
+    return directionOrthogonale;
 }
 
 /** ************************************************************************* **/
 
 void GLApplication::normalSection() {
+    // On veut calculer les normales aux sommets de la section
     _normalSection.clear();
+    Vector2 normale, // vecteur normale à calculer pour chaque point
+            segment; // Segment utilisé pour calculer la normale
 
+    // Pour le premier sommet de la section, la normale est celle du premier segment de la section
+    segment = Vector2(_section[0], _section[1]);
+    normale = segment.normalSegment(segment); // vecteur perpendiculaire à vecteur (x,y) est le vecteur (-y,x)
+    _normalSection.push_back(normale);
 
+    // Pour le dernier sommet de la section, la normale est celle du dernier segment de la section
+    segment = Vector2(_section[_section.size()-2], _section[_section.size() - 1]);
+    normale = segment.normalSegment(segment);
+
+    // Pour les autres points, on prend la normale
+    for (unsigned int i=1; i<_section.size()-1;i++) {
+        segment =
+    }
 }
 
 
@@ -375,31 +463,31 @@ void GLApplication::extrudeLine() {
     float y; // coordonnées Y de section
     float z; // coordonnées Z de path
 
-    int nextPathIdx = 0; // index du point suivant du _path (pour calculer le segment à appliquer en rotatePlane)
-    for(Vector3 ptPath : _path) {
+    for(unsigned int i = 0; i < _path.size(); i++) {
+        Vector3 ptPath = _path[i]; // point du path courant
+
         // Commenter pour rotatePlane
-        //z = ptPath.z();
+        //z = ptPath.z(); // Q6
+
+        // Direction orthogonale du point courant du path (_path[i])
+        Vector3 n = tangentPathLine(i);
+
         for(Vector2 ptSection : _section) {
             x = ptSection.x();
             y = ptSection.y();
 
-            //Vector3 ptExtrusion = Vector3(x,y,z); // ancien ajout du point d'extrusion
+            //Vector3 ptExtrusion = Vector3(x,y,z); // ancien ajout du point d'extrusion (avant Q7)
 
             // Point p, situé dans le plan (x,y)
             Vector3 p = Vector3(x, y, 0);
 
-            // Segment du path
-            Vector3 n = _path[nextPathIdx] - ptPath;
+            // Segment du path (Q7 car on n'a qu'un seul segment dans _path)
+            // Vector3 n = _path[1] - _path[0];
 
             // Obtenir point p après changement de repère
-            Vector3 extru = rotatePlane(p, ptPath);
+            Vector3 extru = rotatePlane(p, n);
             _extrusion.push_back(ptPath + extru);
         }
-        nextPathIdx++;
-        // terminer la boucle si le pointeur courant du foreach arrive au dernier point du _path
-//        if(nextPathIdx == _path.size()) {
-//            break;
-//        }
     }
 }
 
@@ -409,7 +497,26 @@ void GLApplication::extrudeSpline() {
     _extrusion.clear();
     _normalExtrusion.clear(); // for lighting (last question)
 
+    unsigned int n = 100; // 100 points de la courbe
+    double step=1.0/(n-1); // step qui permet de faire évoluer le t à chaque tour de boucle
+    double t=0;
+    for(unsigned int i = 0; i < n ; i++) {
+        Vector3 ptSpline = pointSpline(t); // Origine de la section passe de point du path à pointSpline
+        Vector3 tanSpline = tangentPathSpline(t); // direction orthogonale devient tangentSpline
 
+        for(Vector2 ptSection : _section) {
+            // Coordonnées x et y de la section
+            float x = ptSection.x();
+            float y = ptSection.y();
+
+            Vector3 p = Vector3(x,y,0);
+            Vector3 extru = rotatePlane(p, tanSpline);
+            _extrusion.push_back(ptSpline + extru);
+        }
+
+        // Évolution de t pour la prochaine itération
+        t+= step;
+    }
 }
 
 
