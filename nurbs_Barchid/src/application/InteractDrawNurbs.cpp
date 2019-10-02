@@ -375,7 +375,7 @@ vector<Vector2> InteractDrawNurbs::basisRepresentation(int k,int p,const std::ve
    * - _nurbs->evalNkp(k,p,u,knot) is the value of the basis function Nkp(u) for the parameter u (done in previous question)
    * - compute the representation where the basis function is non-zero (i.e. in the interval [??,??] (you have to determine the interval))
    */
-  for
+
 
   return representation;
 }

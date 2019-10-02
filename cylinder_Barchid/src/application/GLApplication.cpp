@@ -289,17 +289,16 @@ void GLApplication::drawExtrusion() {
     p3d::shaderVertexAmbient();
 
 
-    drawGrid(_extrusion,nbSlice); // comment this once last question done
+    //drawGrid(_extrusion,nbSlice); // comment this once last question done
 
-    /*
-   *  uncomment once normals computed (last question)
-  p3d::lightPosition[0]=Vector4(0,0,10,1);
-  p3d::lightIntensity[0]=1.0;
-  p3d::material(Vector4(0,0,0.3,1),Vector3(0,0.2,0.8),Vector3(0,0.8,0.3),100);
-  p3d::diffuseBackColor=Vector3(0.8,0,0);
-  p3d::shaderLightPhong();
-  fillGrid(_extrusion,_normalExtrusion,nbSlice);
-  */
+
+    //  uncomment once normals computed (last question)
+    p3d::lightPosition[0]=Vector4(0,0,10,1);
+    p3d::lightIntensity[0]=1.0;
+    p3d::material(Vector4(0,0,0.3,1),Vector3(0,0.2,0.8),Vector3(0,0.8,0.3),100);
+    p3d::diffuseBackColor=Vector3(0.8,0,0);
+    p3d::shaderLightPhong();
+    fillGrid(_extrusion,_normalExtrusion,nbSlice);
 
 
 
@@ -432,23 +431,29 @@ Vector3 GLApplication::tangentPathLine(unsigned int i) {
 /** ************************************************************************* **/
 
 void GLApplication::normalSection() {
-    // On veut calculer les normales aux sommets de la section
     _normalSection.clear();
-    Vector2 normale, // vecteur normale à calculer pour chaque point
-            segment; // Segment utilisé pour calculer la normale
 
-    // Pour le premier sommet de la section, la normale est celle du premier segment de la section
-    segment = Vector2(_section[0], _section[1]);
-    normale = segment.normalSegment(segment); // vecteur perpendiculaire à vecteur (x,y) est le vecteur (-y,x)
-    _normalSection.push_back(normale);
+    // CALCULER les normales de chaque segments de la section
+    std::vector<Vector2> normales;
+    for(unsigned int i=0; i<_section.size()-1; i++){ // note : ne pas prendre le dernier point dans le for() parce qu'il n'y a pas de segment après
+        // Segment courant
+        Vector2 segment = Vector2(_section[i], _section[i+1]);
 
-    // Pour le dernier sommet de la section, la normale est celle du dernier segment de la section
-    segment = Vector2(_section[_section.size()-2], _section[_section.size() - 1]);
-    normale = segment.normalSegment(segment);
+        // Calculer la normale de ce segment (vecteur perpendiculaire à vecteur (x,y) est le vecteur (-y,x)
+        Vector2 normale = Vector2(-segment.y(), segment.x());
+        normales.push_back(normale);
+    }
 
-    // Pour les autres points, on prend la normale
-    for (unsigned int i=1; i<_section.size()-1;i++) {
-        segment =
+    // CALCULER les moyennes des normales pour chaque point de la section
+    Vector2 moyenne = Vector2(normales[0]);  // ATTENTION la normale pour le premier point de la section est la normale du premier point telle quelle sans moyenne
+    moyenne.normalize(); // normaliser sinon l'éclairage de Phong ne fonctionne pas
+    _normalSection.push_back(normales[0]);
+
+    for(unsigned int i=0; i<_section.size()-1; i++){
+        // Calcul de la moyenne des normales pour le point de la section
+        moyenne = (normales[i]+normales[i+1])/2;
+        moyenne.normalize(); // normaliser pour l'éclairage
+        _normalSection.push_back(moyenne);
     }
 }
 
@@ -459,9 +464,12 @@ void GLApplication::extrudeLine() {
     _extrusion.clear();
     _normalExtrusion.clear(); // for lighting (last question)
 
+    normalSection(); // construire les normales
+
     float x; // coordonnées X de section
     float y; // coordonnées Y de section
     float z; // coordonnées Z de path
+    Vector3 normale; // normale qui sera utilisée pour l'extrusion
 
     for(unsigned int i = 0; i < _path.size(); i++) {
         Vector3 ptPath = _path[i]; // point du path courant
@@ -471,7 +479,7 @@ void GLApplication::extrudeLine() {
 
         // Direction orthogonale du point courant du path (_path[i])
         Vector3 n = tangentPathLine(i);
-
+        unsigned int j = 0;
         for(Vector2 ptSection : _section) {
             x = ptSection.x();
             y = ptSection.y();
@@ -487,6 +495,11 @@ void GLApplication::extrudeLine() {
             // Obtenir point p après changement de repère
             Vector3 extru = rotatePlane(p, n);
             _extrusion.push_back(ptPath + extru);
+
+            // Ajout de la normale pour le point d'extrusion ajouté
+            normale = Vector3(_normalSection[j], 0);
+            _normalExtrusion.push_back(normale);
+            j++; // mise à jour de l'index
         }
     }
 }
@@ -497,13 +510,18 @@ void GLApplication::extrudeSpline() {
     _extrusion.clear();
     _normalExtrusion.clear(); // for lighting (last question)
 
+    normalSection();
+
     unsigned int n = 100; // 100 points de la courbe
     double step=1.0/(n-1); // step qui permet de faire évoluer le t à chaque tour de boucle
     double t=0;
+    Vector3 normale; // normale utilisée pour l'éclairement dans le point d'extrusion
+
     for(unsigned int i = 0; i < n ; i++) {
         Vector3 ptSpline = pointSpline(t); // Origine de la section passe de point du path à pointSpline
         Vector3 tanSpline = tangentPathSpline(t); // direction orthogonale devient tangentSpline
 
+        unsigned j = 0;
         for(Vector2 ptSection : _section) {
             // Coordonnées x et y de la section
             float x = ptSection.x();
@@ -512,6 +530,11 @@ void GLApplication::extrudeSpline() {
             Vector3 p = Vector3(x,y,0);
             Vector3 extru = rotatePlane(p, tanSpline);
             _extrusion.push_back(ptSpline + extru);
+
+            // Ajout de la normale pour le point d'extrusion ajouté
+            normale = Vector3(_section[j], 0);
+            _normalExtrusion.push_back(normale);
+            j++;
         }
 
         // Évolution de t pour la prochaine itération
