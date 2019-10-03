@@ -67,9 +67,16 @@ double Nurbs::evalNkp(int k,int p,double u,const std::vector<double> &U) {
         double Nk_pmoins1 = evalNkp(k, p-1, u, U);
         double N_kplus1_pmoins1 = evalNkp(k+1, p-1, u, U);
 
-        Nkp = ( (u-U[k]) / (U[k+p]-U[k]) )   *   Nk_pmoins1
-                +
-                ( (U[p+k+1] - u) / (U[k+p+1] - U[k+1]) )   *   N_kplus1_pmoins1;
+        // SI [le dénominateur dans la formule magique du Nkp se rapproche fort de 0]
+        if((U[k+p+1] - U[k+1]) <= 0.09 && (U[k+p+1] - U[k+1]) >= 0) {
+            Nkp = ( (u-U[k]) / (U[k+p]-U[k]) )   *   Nk_pmoins1; // deuxième terme de l'addition vaut 0 (voir foru
+        }
+        // SINON [on n'a pas de noeuds confondus donc on applique la formule de base]
+        else {
+            Nkp = ( (u-U[k]) / (U[k+p]-U[k]) )   *   Nk_pmoins1
+                    +
+                    ( (U[p+k+1] - u) / (U[k+p+1] - U[k+1]) )   *   N_kplus1_pmoins1;
+        }
     }
 
 
@@ -117,15 +124,27 @@ void Nurbs::addControlU(const Vector4 &p) {
 
 
 Vector3 Nurbs::pointCurve(double u) {
-    Vector4 result(0,0,0,0);
+    Vector4 Pu(0,0,0,0); // Résultat Pu de la formule à calculer
     /* TODO :
  * - compute P(t) in result. Use the direction D_U only (curve)
  * - control(i) : control points
  * - nbControl(D_U) : number of control points
  * - evalNkp(k,p,u,_knot[D_U]) to eval basis function
  */
+    // Appliquer la formule du cours
+    int p = degree(D_U); // degree à la direction D_U
+    int n = nbControl(D_U);
+    for(unsigned int k = 0; k < n; k++) {
+        // Récupérer le point de controle
+        Vector4 Pk = _control[k];
 
-    return Vector3(result.x(),result.y(),result.z());
+        // Evaluer la valeur de fonction base Nkp(u)
+        double Nkpu = evalNkp(D_U, k, p, u);
+        Pu += Nkpu * Pk;
+    }
+
+    // renvoyer le vector3 de Pu (donc pas en coordonnées homogènes)
+    return Vector3(Pu.x(),Pu.y(),Pu.z()) / Pu.w();
 }
 
 
