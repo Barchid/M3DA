@@ -90,6 +90,17 @@ bool InteractDrawNurbs::computeCurve() {
    * - _nurbs->pointCurve(u) should give the point P(u)
    */
 
+    // Valeur de u entre début et fin de l'intervalle
+    double uStart = _nurbs->startInterval(D_U);
+    double uEnd = _nurbs->endInterval(D_U);
+    double step = (uEnd - uStart) / (_drawNbPts);
+    double u = uStart;
+
+    for(unsigned int i = 0; i < _drawNbPts; i++) {
+        u+=step;
+        Vector3 curvePoint = _nurbs->pointCurve(u);
+        _draw[i] = (curvePoint);
+    }
 
     _computeNurbsRequest=false;
     return true;
@@ -378,19 +389,24 @@ vector<Vector2> InteractDrawNurbs::basisRepresentation(int k,int p,const std::ve
 
     // On veut tracer la courbe dans l'intervalle [Uk,Uk+p]
     double uk = knot[k]; // Uk (le début)
-    double umax = knot[k+p]; // Uk+p (la fin)
-    double step = (umax - uk) / nbPoint;
+    double umax = knot[k+p+1]; // Uk+p (la fin)
+    double step = (umax - uk) / (nbPoint);
 
     // POUR CHAQUE u DANS INTERVALLE [uk,umax]
-    for(double u = uk; u <= umax; u +=  step) {
+    for(double u = uk; u < umax; u +=  step) { // BEST PRACTICE : utiliser un i parce que c'est mieux
         // évaluer nkp
         double Nkp = _nurbs->evalNkp(k,p,u,knot);
 
-        // Créer le point à ajouter
-        Vector2 point = Vector2(u, Nkp);
-
         // Ajouter à la représentation
-        representation.push_back(point);
+        representation.push_back(Vector2(u, Nkp));
+    }
+
+    // Ajouter un point à la fin pour assurer la continuité de la courbe (en gros je veux juste que ça touche le prochain point sinon ça fait moche)
+    if(p == 0) {
+        representation.push_back(Vector2(umax, 1));
+    }
+    else {
+        representation.push_back(Vector2(umax, 0));
     }
     return representation;
 }
