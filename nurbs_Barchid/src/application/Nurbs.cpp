@@ -40,8 +40,10 @@ void Nurbs::knotUniform(EDirection direction,int nb) {
     _knot[direction].resize(nb);
     // On veut nb noeuds répartis uniformément entre 0 et 1
     double step = 1.0/(nb-1);
-    for(double noeud = 0; noeud <= 1.0; noeud+=step) {
-        _knot[direction].push_back(noeud);
+    double u = 0; // valeur du noeud à placer
+    for(int i = 0; i < nb; i++) {
+        _knot[direction][i] = u;
+        u += step; // mise à jour pour la valeur du noeud suivant
     }
 }
 
@@ -62,20 +64,18 @@ double Nurbs::evalNkp(int k,int p,double u,const std::vector<double> &U) {
     }
     else {
         // On applique la formule (3) de l'énoncé
-
-        // calcul des paramètres
-        double Nk_pmoins1 = evalNkp(k, p-1, u, U);
-        double N_kplus1_pmoins1 = evalNkp(k+1, p-1, u, U);
-
-        // SI [le dénominateur dans la formule magique du Nkp se rapproche fort de 0]
-        if((U[k+p+1] - U[k+1]) == 0) {
-            Nkp = ( (u-U[k]) / (U[k+p]-U[k]) )   *   Nk_pmoins1; // deuxième terme de l'addition vaut 0 (voir foru
+        // SI [ le dénominateur du premier terme de l'addition dans la formule est non nul] (les noeuds U_k+p et U_k sont confondus)
+        if((U[k+p] - U[k]) != 0.) {
+            // ALORS [ j'applique le premier terme de la formule]
+            double Nk_pmoins1 = evalNkp(k, p-1, u, U); // récursion
+            Nkp += ( (u-U[k]) / (U[k+p]-U[k]) )   *   Nk_pmoins1;
         }
-        // SINON [on n'a pas de noeuds confondus donc on applique la formule de base]
-        else {
-            Nkp = ( (u-U[k]) / (U[k+p]-U[k]) )   *   Nk_pmoins1
-                    +
-                    ( (U[p+k+1] - u) / (U[k+p+1] - U[k+1]) )   *   N_kplus1_pmoins1;
+
+        // SI [ le dénominateur du deuxième terme de l'addition dans la formule est non nul] (les noeuds U_k+p+1 et U_k+1 sont confondus)
+        if((U[k+p+1] - U[k+1]) != 0.) {
+            // ALORS [ j'applique le deuxième terme de la formule]
+            double N_kplus1_pmoins1 = evalNkp(k+1, p-1, u, U); // récursion
+            Nkp += ( (U[p+k+1] - u) / (U[k+p+1] - U[k+1]) )   *   N_kplus1_pmoins1;
         }
     }
 
@@ -180,16 +180,42 @@ bool Nurbs::checkNbKnot(EDirection direction) {
 
 
 void Nurbs::knotOpenUniform(EDirection direction) {
-    _knot[direction].resize(nbControl(direction)+degree(direction)+1);
-
-
     /* TODO : the first and the last knots have a degree+1 multiplicity
    *
    *
    *
    *
    */
+    // NOTE : les noeuds de début et de fin qui ont une multiplicité = p+1, ça signifie qu'au début et à la fin du vecteur nodale, je dois avoir
+    // p+1 noeuds de même valeur
 
+    int n = nbControl(direction); // nombre de points de contrôle
+    int p = degree(direction); // degré p de la courbe souhaitée
+    int tailleVecteurNodale = n + 1 + p; // n+1+p noeuds dans le vecteur nodale
+    _knot[direction].resize(tailleVecteurNodale);
+    int k = 0; // indice utilisé pour ajouter dans le noeud U_k dans le vecteur nodale
+
+    // AJOUTER les p+1 noeuds de début à 0 (pour avoir une multiplicité p+1
+    for(int i = 0 ; i < p+1; i++) {
+        _knot[direction][k] = 0.;
+        k++;
+    }
+
+    // RÉPARTIR les noeuds du milieu entre 0 et 1
+    double nbNoeudsRepartis = tailleVecteurNodale - 2*(p+1); // le nombre de noeus répartis entre 0 et 1 = le nombre total de noeuds - les noeuds de début et de fin confondus
+    double step = 1.0/(nbNoeudsRepartis);
+    double uk = step;
+    for(int i = 0; i < nbNoeudsRepartis; i++) {
+        _knot[direction][k] = uk;
+        uk+= step;
+        k++;
+    }
+
+    // AJOUTER les p+1 noeuds de fin à 1 (pour avoir une multiplicité p+1)
+    for(int i = 0 ; i < p+1; i++) {
+        _knot[direction][k] = 1.;
+        k++;
+    }
 }
 
 
