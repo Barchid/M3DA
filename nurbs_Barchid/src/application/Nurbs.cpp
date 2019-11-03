@@ -149,7 +149,7 @@ Vector3 Nurbs::pointCurve(double u) {
 
 
 Vector3 Nurbs::pointSurface(double u,double v) {
-    Vector4 result(0,0,0,0);
+    Vector4 Puv(0,0,0,0);
     /* TODO :
    * - compute P(u,v) in result.
    * - control(i,j) : control points (i= indice in direction D_U, j=indice in direction D_V)
@@ -158,7 +158,30 @@ Vector3 Nurbs::pointSurface(double u,double v) {
    * - evalNkp(k,p,t,_knot[<D_U or D_V>]) to eval basis function in each direction
    */
 
-    return result.project(); // divide by w
+    // DÉFINIR les variables comme dans la formule de l'énoncé
+    int nu = nbControl(D_U);
+    int nv = nbControl(D_V);
+    int pu = degree(D_U);
+    int pv = degree(D_V);
+
+    // POUR CHAQUE [indice l dans la direction v]
+    for(int l = 0; l < nv; l++) {
+
+        // EVALUER P'_l grâce à la définition d'une courbe NURBS pour l'indice l donné
+        Vector4 P_prime_l = Vector4(0,0,0,0);
+        // POUR CHAQUE [indice k de la direction D_U]
+        for(int k=0; k < nu; k++) {
+            Vector4 Pkl = control(k, l); // point de contrôle Pkl de la formule (5) de l'énoncé
+            double Nkpu = evalNkp(k, pu, u, _knot[D_U]); // evaluation N_kp(u)
+            P_prime_l += Nkpu * Pkl;
+        }
+
+        // Avec P'_l, on peut compléter la formule notée (6) dans l'énoncé
+        double Nlpv = evalNkp(l, pv, v, _knot[D_V]);
+        Puv += Nlpv * P_prime_l;
+    }
+
+    return Puv.project(); // divide by w
 }
 
 
@@ -226,7 +249,18 @@ void Nurbs::knotBezier(EDirection direction) {
    *
    *
    */
+    int n = nbControl(direction); // n est le nombre de points de contrôle
+    int p = n - 1; // la courbe de bézier est une courbe de degré p = n-1
+    degree(direction, p);
+    int tailleVecteurNodale = n + 1 + p; // n+1+p noeuds dans le vecteur nodale
+    _knot[direction].resize(tailleVecteurNodale);
 
+    // courbe de bézier est une courbe dont la première moitié des noeuds sont uk = 0, et l'autre moitié est uk = 1
+    double uk = 0.;
+    for(int i = 0; i < tailleVecteurNodale; i++) {
+        uk = i < tailleVecteurNodale/2 ? 0. : 1.; // première moitié uk = 0, deuxième moitié uk = 1
+        _knot[direction][i] = uk;
+    }
 }
 
 void Nurbs::setCircle() {
@@ -235,6 +269,42 @@ void Nurbs::setCircle() {
    */
     _control.clear();
 
+    // POINTS DE CONTRÔLE
+    _nbControl[D_U] = 7; // n = 7 points de contrôles
+
+    // les poids w_i des points de contrôle
+    double w0, w1, w2, w3, w4, w5, w6;
+    w1 = w3 = w5 = 0.5; // w1, w3 et w5 = cos(60°) = 0.5
+    w0 = w2 = w4 = w6 = 1; // les autres poids à 1
+
+    // placer les points de contrôle pour faire un triangle équilatéral
+    Vector4 p0 = Vector4(0, 0, 0, w0);
+    Vector4 p1 = Vector4(-1, 0, 0, w1);
+    Vector4 p2 = Vector4(-1, 1, 0, w2);
+    Vector4 p3 = Vector4(0, 1, 0, w3);
+    Vector4 p4 = Vector4(1, 1, 0, w4);
+    Vector4 p5 = Vector4(1, 0, 0, w5);
+    Vector4 p6 = Vector4(0, 0, 0, w6);
+
+    _control.push_back(p0);
+    _control.push_back(p1);
+    _control.push_back(p2);
+    _control.push_back(p3);
+    _control.push_back(p4);
+    _control.push_back(p5);
+    _control.push_back(p6);
+
+
+    // DEGRÉ = 2
+    degree(D_U, 2);
+
+    // VECTEUR NODALE = [0,0,0,1,1,2,2,3,3,3]
+    _knot[D_U] = {0., 0., 0., 1., 1., 2., 2., 3., 3., 3.};
+
+    // normaliser les valeurs du vecteur nodale pour bien voir les courbes sur l'affichage à l'écran
+    for(int i = 0; i < _knot[D_U].size(); i++) {
+        _knot[D_U][i] /= 3; // la valeur maximale est 3 donc on normalise en divisant par 3
+    }
 }
 
 
