@@ -391,15 +391,26 @@ vector<Vector2> InteractDrawNurbs::basisRepresentation(int k,int p,const std::ve
     double uk = knot[k]; // Uk (le début)
     double umax = knot[k+p+1]; // Uk+p (la fin)
     double step = (umax - uk) / (nbPoint);
+    double u = uk; // valeur du noeud à mettre à jour
 
     // POUR CHAQUE u DANS INTERVALLE [uk,umax]
-    for(double u = uk; u < umax; u +=  step) { // BEST PRACTICE : utiliser un i parce que c'est mieux
-        // évaluer nkp
-        double Nkp = _nurbs->evalNkp(k,p,u,knot);
+    for(int i = 0; i < nbPoint; i++) {
+        // évaluer Nkp
+        double Nkp = _nurbs->evalNkp(k, p, u, knot);
 
-        // Ajouter à la représentation
+        // ajouter à la représentation
         representation.push_back(Vector2(u, Nkp));
+
+        u += step; // mise à jour du u pour le prochain point de la représentation
     }
+
+//    for(double u = uk; u < umax; u +=  step) { // BEST PRACTICE : utiliser un i parce que c'est mieux
+//        // évaluer nkp
+//        double Nkp = _nurbs->evalNkp(k,p,u,knot);
+
+//        // Ajouter à la représentation
+//        representation.push_back(Vector2(u, Nkp));
+//    }
 
     // Ajouter un point à la fin pour assurer la continuité de la courbe (en gros je veux juste que ça touche le prochain point sinon ça fait moche)
     if(p == 0) {
