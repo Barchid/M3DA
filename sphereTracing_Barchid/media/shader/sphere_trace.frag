@@ -21,6 +21,9 @@ float distanceNode[nbNodeMax];
 bool isSet[nbNodeMax];
 vec4 colorNode[nbNodeMax];
 
+// Calcul des distances :
+// https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
 // Distance d'un point P (dans le repère de la sphère) à cette sphère (de centre (0,0,0) et de rayon 1)
 float dSphere(vec3 p) {
     // Calcul vu en cours
@@ -37,13 +40,9 @@ float dCube(vec3 p, int i) {
     mat4 M_cube_eye = leafEyeMatrix[i];
     vec4 P_cube = M_cube_eye * P_eye; // (on passe en coordonnées homogènes avec w=1
 
-    // L'explication à l'équation retournée est donnée ici :
-    // https://math.stackexchange.com/questions/2133217/minimal-distance-to-a-cube-in-2d-and-3d-from-a-point-lying-outside
-    return sqrt(
-                pow(max(0, abs(P_cube.x) - 1), 2) +
-                pow(max(0, abs(P_cube.y) - 1), 2) +
-                pow(max(0, abs(P_cube.z) - 1), 2)
-                );
+    // Calcul du cube (voir Iquilezles.org)
+    vec3 q = abs(P_cube.xyz) - vec3(1,1,1);
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
 
@@ -111,6 +110,7 @@ float dCone(vec3 p, int i)
     return max(m1, -P_cone.y);
 }
 
+// Calcule la distance à un cylindre de hauteur 1 et de rayon r
 float dCylinder(vec3 p, int i)
 {
     vec4 P_eye = vec4(p, 1.0);
@@ -118,8 +118,10 @@ float dCylinder(vec3 p, int i)
     mat4 M_cylinder_eye = leafEyeMatrix[i];
     vec4 P_cylinder = M_cylinder_eye * P_eye; // (on passe en coordonnées homogènes avec w=1
 
-    float r = 1;
-    return max(length(P_cylinder.xz) - r, abs(P_cylinder.y) - r);
+    float h = 1; // hauteur de 1
+    float r = 1; // rayon de 1
+    vec2 d = abs(vec2(length(P_cylinder.xz), P_cylinder.y)) - vec2(h,r);
+    return min(max(d.x,d.y),0.0) + length(max(d,0.0));
 }
 
 // set distanceNode[indexNode] if indexNode is a primitive
@@ -168,14 +170,12 @@ void updateParent(int indexNode) {
         // INTERSECTION (on prend le max entre les deux enfants)
         else if(operation == 1) {
             distanceNode[parent] = max(distanceEnfant1, distanceEnfant2);
-            colorNode[parent] = distanceEnfant2 > distanceEnfant1 ? colorNode[indexNode] : colorNode[parent];
+            colorNode[parent] = (distanceEnfant2 < distanceEnfant1) ? colorNode[indexNode] : colorNode[parent];
         }
         // DIFFERENCE
         else if(operation == 2) {
-            if (distanceEnfant1 <= -distanceEnfant2) {
-                distanceNode[parent] = -distanceEnfant2;
-                colorNode[parent] = colorNode[indexNode];
-            }
+            distanceNode[parent] = max(distanceEnfant1, -distanceEnfant2);
+            colorNode[parent] = distanceNode[parent] == -distanceEnfant2 ? colorNode[indexNode] : colorNode[parent];
         }
     }
     // SINON [je place juste la valeur de l'enfant dans le parent]

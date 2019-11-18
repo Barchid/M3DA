@@ -137,23 +137,25 @@ void GLApplication::initialize() {
     //        0,-1 // noeud N6 -> N4 U N5
     //    };
 
-//    // SPHERE U CUBE
-//    _tree={
-//        4,2, // noeud N0 -> sphère
-//        7,2, // noeud N1 -> cube
-//        0,-1 // noeud N2 -> N0 U N1
-//    };
+    //    // SPHERE U CUBE
+    //    _tree={
+    //        4,2, // noeud N0 -> sphère
+    //        7,2, // noeud N1 -> cube
+    //        0,-1 // noeud N2 -> N0 U N1
+    //    };
 
     // Arbre CSG pour avoir la même chose que sur l'énoncé
+
     _tree = {
-//        7,3, // noeud N0 -> cylindre
-//        7,3, // noeud N1 -> cylindre
-//        7,4, // noeud N2 -> cylindre
-//        0,4, // noeud N3 -> N0 U N1
-//        0,-1 // noeud N4 -> N2 U N3
-        4,2,
-        5,2,
-        0,-1
+        4,5,  // noeud N0 -> sphere
+        5,5,  // noeud N1 -> cube
+        7,6,  // noeud N2 -> cylindre
+        7,6,  // noeud N3 -> cylindre
+        7,7,  // noeud N4 -> cylindre
+        1,8,  // noeud N5 -> N0 AND N1
+        0,7,  // noeud N6 -> N2 U N3
+        0,8,  // noeud N7 -> N4 U N6
+        2,-1  // noeud N8 -> N5 - N7
     };
 
     // pour le truc par défaut (union deux sphères)
@@ -175,13 +177,14 @@ void GLApplication::initialize() {
 
     // Pour le CSG
     _leaf = {
-//        Matrix4::fromTranslation(0,0,0).scale(1, 2, 1), // N0 -> cylindre
-//        Matrix4::fromTranslation(0,0,0).scale(2, 1, 1).rotate(90, 0, 0, 1),
-//        Matrix4::fromTranslation(0,0,0).scale(1, 1, 2).rotate(90, 1, 0, 0)
-        Matrix4::fromTranslation(0,0,0).scale(1,1,1),
-        Matrix4::fromTranslation(0,0,0).scale(1,1,1)
-
+        Matrix4::fromTranslation(0,0,0).scale(2,2,2),
+        Matrix4::fromTranslation(0,0,0).scale(1.5,1.5,1.5),
+        Matrix4::fromTranslation(0,0,0).scale(1, 2, 1),
+        Matrix4::fromTranslation(0,0,0).scale(2, 1, 1).rotate(90, 0, 0, 1),
+        Matrix4::fromTranslation(0,0,0).scale(1, 1, 2).rotate(90, 1, 0, 0)
     };
+
+    //    };
 
     // avec un scale
     //    _leaf={
@@ -198,12 +201,11 @@ void GLApplication::initialize() {
 
     // deux couleurs pour une union
     _color={
-//        Vector4(0,1,0,1), // noeud N0 -> Cylindre vert
-//        Vector4(0,1,0,1), // noeud N0 -> Cylindre vert
-//        Vector4(0,1,0,1)  // noeud N0 -> Cylindre vert
         Vector4(0,0,1,1),
-        Vector4(1,0,0,1)
-
+        Vector4(1,0,0,1),
+        Vector4(0,1,0,1),
+        Vector4(0,1,0,1),
+        Vector4(0,1,0,1)
     };
 
     /** ** **/
