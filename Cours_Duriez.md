@@ -1,0 +1,213 @@
+# Mechanical deformable models
+
+- Fem model
+  - F = forces internes
+  - On rajoute H, qui sont des forces de contraintes
+- Integration schemes
+  - Pas mal de choses uqi dépendent du temps d'intégration
+  - De la méthode d'intégration
+- Méthode explicite et implicite
+  - Explicite
+    - On va dire qu'on ne connaît pas l'accélération mais par contre la position et la vitesse on la connaît
+    - Comme c'est connu, je peux calculer mes forces et la seule chose que j'ai à résoudre, c'est que accélération et la matrice de masse inversée * forces internes
+    - Truc à résoudre plutôt simple 
+    - Imaginons qu'on a un système d'équation mais que chaque équation est couplée l'une à l'autre 
+    - Donc ok
+    - On peut implémenter 
+    - Par contre, c'est conditionnellement stable et il y a une limite sur le pas de temps utilisé
+    - Tout petit pas de temps requis ici (centième millisecondes par ex) donc beaucoup + de calculs mais ils sont plus simples à résoudre
+  - Implicite
+    - Position et vitesse dépendent de accélération courante
+    - Système d'équation non-linéaire à résoudre ==> plus compliqué
+    - Inconditionnellement stable
+    - Pas de temps + grand qu'on peut use mais calculs compliqués
+- Déformation en dynamique, ça fait une onde
+  - Plus objet est rigide, plus onde est rapide
+  - Contrainte plus forte sur pas de temps si objet rigide
+- Plus on utilise des éléments petits, plus on aura des contraintes sur le pas de temps 
+- Non-smooth events
+  - Méthode event-driven
+    - on va arrêter l'intégration en temps juste au moment de l'impact
+    - On va résoudre l'impact
+    - puis on restart la simulation
+    - Avantage : 
+      - Entre deux événements, on a une simulation qui est normale
+      - Continuité forte donc 
+    - Désavantage
+      - Si j'ai beaucoup de contacts, j'ai full stop de simu à faire 
+      - Problème du rebond
+        - Au moment de l'impact, ma vitesse devient e * vitesse (e est le coefficient de refac de Newton)
+        - Pas ouf
+  - Méthode time stepping
+    - Fixed time steps
+      - $v = {\delta v \over \delta t} = {d v \over dt} = {v_{t+1} - v_0 \over dt}$
+      - On détecte toutes les collisions en même temps pour un même pas de temps
+      - Genre deux objets font deux collisions en différés mais durant le même pas de temps, on criora que c'est le même moment
+      - Approximation vitesse :
+        - On approxime l'intégration de la vitesse en polynomes + simples car la courbe de la vitesse est généralement continue
+        - Sauf que quand on a une impulsion, on a un moment où la vitesse a été kickée de ouf du coup la vitesse n'est plus continue (on a un énorme pique très court en un coup)
+        - C'est de la merde du coup la continuité
+        - La solution est de couper le moment où la continuité part en couille (impact)
+    - Time-stepping
+      - On obtient gros système d'équation à résoudre
+      - Par pas de temps, j'ai une équation non-linéaire à résoudre
+      - Donc
+        - $Mdv = f(x)$
+        - $O = (Mdv - f(x)$
+- Ce qu'on va utiliser aujourd'hui
+  - une seule linéarisation
+  - Il faut mesurer suffisamment parce que quand on utilise des trop grand pas de temps, on a une instabilité
+- PRoblématique de pas de temps
+  - Il faut que le pas de temps physique soit bien proportionné
+  - Il faut que le temps physique et le temps de la simulation soient le même sinon ça ne va servir à rien
+  - Le choix du pas de temps dépend du temps que je mets pour montrer les choses 
+- Plein de techniques pour gérer le temps réel comme ça 
+- Matrice block-tri diagonale
+  - On a des blocs de matrices dans une même matrice et c'est diagonale
+  - C'est ce qu'on a dans des fils linéiques en simu
+  - Je n'aurai de contribution que quand j'ai un élément qui lie deux noeuds
+- Pattern block tri diag matrix
+  - J'ai un fil avec 1 - 2 - 3 - 4
+  - Entre 1 et 2, j'ai un lien, donc ça va faire une matrice
+  - Entre 1 et les autres, j'ai des 0
+  - Et c'est pareil pour tout le monde
+- Maillage de noeuds
+  - On a des matrices entre deux noeuds liés donc cool
+  - MAIS on a full 0 entre les noeuds quand ils ne sont pas connectés
+  - Donc on aura surtout full 0 dans la matrice $\bold{M}$
+- $\bold{A}x = b$ (x est inconnu, c'est $dv$)
+- $\bold{A}x_0 = b_0$
+- Je calcule $r = b-b_0$
+  - C'est l'erreur entre les deux b
+- $x_1 = \alpha r + x_0$
+  - Ca s'appelle une méthode de gradient
+  - On calcule erreur r et on fait converger x vers solution en additionnant une proportion de l'erreur entre les deux $b$
+- On refait ça itérativement jusqu'à ce que je converge
+- Si je ne mets pas trop d'itérations à converger, c'est rapide
+- Il n'y a qu'une multiplication matricielle à faire
+- Solution
+  - On cherche une matrice P qui est fort similaire à A
+  - Du coup $P^{-1} A = I$ (matrice identité)
+  - Et du coup on peut mieux gérer
+  - Mais comment trouver $P$ ?
+    - On prend une valeur de $\bold{A}$ d'avant, vu qu'entre deux pas de temps, le A ne change pas de ouf non plus
+- Autre solution
+  - Model order reduction
+    - Chaque position est composée d'autres
+    - On calcule une matrice $\bold{A}$ réduite
+- Résolution des contacts
+  - Il faut les détecter
+  - Et il faut les résoudre
+- Détecter contacts
+  - Problème géométrique 
+    - J'ai les maillages, il faut que je vois quand il s'intersecte --> détection spatiale
+    - Oi je peux voir à quel moment il y a eu intersection --> détection spatio-temporelle
+  - Event-driven
+    - Il faut savoir quand a lieu le contact
+    - Donc spatio-temporelle pour eux
+- Détection spatiale
+  - On observe à des instants donnés les collisions
+    - Problème est qu'on peut manquer des collisions si on a des objets avec une vitesse de ouf
+    - Donc il y a une notion de critique en fonction de la vitesse des objets et du pas de temps choisi
+  - Classes d'algo
+    - On veut catégoriser géométriquement la collision (où elle a lieu)
+    - Plsu on veut une info complète, plus c'est complexe
+    - But : savoir s'il y a collision : juste un booléen
+    - But : récupérer l'intersection de deux surfaces
+      - Pas encore trop compliqué à récupérer mais la complexité est importante
+      - Si je veux tester tous les triangles d'une surface avec tous les triangles d'une autre surface, ça commence à faire beaucoup 
+      - Ce qui va intéresser, ce n'est pas forcément ce truc (car on est déjà trop tard dans simulation si jamais on a deux surfaces qui se rentrent full dedans)
+    - But : estimer l'amplitude de l'intersection
+      - On calcule une distance d'interpenétration
+      - Ou alors on peut aussi calculer le volume d'intersection
+      - Ca dépend aussi des objets convexes ou concaves
+      - En convexe, on a qu'une seule intersection, mais en concave non
+        - Ca peut aussi changer la complexité de récupération
+      - Convexe, on peut avoir des mini globaux, dans concave pas
+      - Objet déformable n'a pas les mêmes sorties d'algo que objets rigides
+        - Un bloc qui se tape sur le sol se tape en entier
+        - Un bloc déformable, pas la même
+        - Problématique qu'il y a dérrière collision
+      - Volume intersection
+        - Approximation numérique sur GPU efficace
+      - Notion de boîtes englobantes
+        - Si on fait sur tous les triangles d'un mesh, c'est archi coûteux
+        - Mais si on use des boîtes englobantes hiérarchiques, on peut accélérer la chose
+        - Si les boîtes englobantes sont séparées, on sait que ce n'est pas en intersection --> on jarte (et sinon, on continue avec les boîte positives)
+        - Ensuite on coupe les boîtes en deux et ainsi de suite comme ça on saute des triangles qui ne servent à rien etc
+      - Volumes englobant
+        - Tu pars de volumes simples qui approchent géométrie de l'objet
+        - Plus le volume simple est élaboré, plus l'approximation sera précise
+        - Plus c'est simple, plus c'est rapide
+- Bilan détection collision
+  - On a full soucis
+  - Dépend de l'application, on n'ap as méthode parfaite
+  - Sujet de recherche chaud (même si un peu moins maintenant mais touours papiers qui sortent)
+  - Vaste l'état de l'art
+  - Études contradictoires et tuot c la haes
+- Partie détecter les contacts
+- Comment résoudre les contacts maintenant ?
+  - Si je prends deux objets déformables qui entrent en contact
+  - Chaque objet déformable = un système d'équation à résoudre pour chaque pas de temps 
+  - Ces deux systèmes d'équation des deux objets déformables qui entrent en collision, deviennent dépendant l'un de l'autre
+  - On a des lignes qui se ressemblent dans le big système d'équation
+    - Donc on peut enlever ces lgines
+    - On a plus d'inconnues que d'équations
+    - Ca fait des problèmes numériques
+    - Et ca fait un big système à résoudre
+- On peut préférer d'utiliser des approches avec des contraintes
+  - Contraintes de type Lagrangienne
+  - Idée:  pour éviter ce problème de lignes qui se ressemblent, j'ajoute des équations dans mon système (avec des niouvelles inconnues)
+    - Et pour ce problème qui grandit, on a une méthode pour gérer
+    - Je peux considérer que mes deux objets sont libres
+    - au départ, je modélise comme si mes deux objets avaient 0 contraintes
+    - Je vais rajouter mes contraintes dans un second temps
+
+# TP 1
+- lien entre ma taille de mes éléments et le calcul que je peux faire
+- Dépend propagation de l'onde de déformation (influencé par k et m)
+  - Si j'augmente k
+    - Ca devient instable
+  - Si je diminue k
+    - Normalement ca va mieux
+    - Dans le chemin d'intégration mis, il y a aucun amortissement
+    - Comme on a masse et rigidité
+    - On a aussi des vibrations qui apparaîssent
+    - Toutes les vibrations captées sont en mode petites déformations
+    - Si je diminue le pas de temps il y a un moment où ça déconne
+  - Intérêt méthode explicite
+    - permet d'avoir une boucle de simulation fortement simple
+    - On a quand même des problèmes de stabilité qui apparaissent
+
+# TP 2
+  - Idée du TP
+    - On va voir potentiel que ça a
+    - On passe de l'implicite à un truc + complexe
+    - On a un maillage simple et avec drap ce sera maillage plus compliiqué
+    - Tester les oslutions
+    - On voit qu'en implicite, par rapport à explicite, c'est que le pas de temps peut être beaucoup plsu gros sans que ça ne devienne instable
+    - Avec pas de temps assez grand, je vois que le truc se stabilise beaucoup plus vite et tout 
+    - La couverture
+      - Un maillage comme avant
+      - Mais mets un ressorts sur tous les edges
+      - Et ça fait genre que c'est un drap c'est cool
+      - On peut s'amuser à fixer d'autres particules pour voir et tout comment ça marche
+      - Visualization > edge > show indice des noeuds
+      - Comme ça on peut fixer les noeuds et tout
+    - On fait une linéarisation par pas de temps
+      - On fait une méthode implicite
+      - Si on commence à faire pas de temps importants
+      - On a des ressorts qui font des grands mouvements
+      - Donc si on fait une seule linéarisation, on n'aura pas tout c pa ouf
+      - Donc on n'est pas totalement implicite
+      - On ne peut pas mettre tous les pas de temps qu'on veut en gros
+  - Modéliser les contacts
+    - On doit ajouter un modèle de collision
+    - Charger maillage, définir maillage et définir modèle collision
+    - Obstacle ne bouge pas 
+    - Friction contact :
+      - Contrainte avec coeff de friction
+    - Pénalité avec ressorts ajoutés
+      - Il faudra baisser le pas de temps si on fait ça
+    - On peut tester différences de comportement 
+    - 
