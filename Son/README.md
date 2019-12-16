@@ -15,3 +15,4 @@ vous inspirez du tableau des fréquences des hauteurs de Wikipédia. Affichez en
 premiers échantillons et copiez les valeurs dans le classeur OpenOffice pour permettre la
 visualisation du signal."
 
+
