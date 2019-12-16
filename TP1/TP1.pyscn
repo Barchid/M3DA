@@ -1,0 +1,20 @@
+import Sofa
+
+
+def createScene(root):
+    root.dt = 0.01
+    root.gravity = [0,9.18,0]
+
+
+    root.createObject( 'RequiredPlugin', template='', name="SofaPython" , printLog="1" , pluginName="SofaPython" )
+    root.createObject( 'VisualStyle', template='', name="VisualStyle" , displayFlags="showVisual hideBehaviorModels hideForceFields showInteractionForceFields showCollisionModels hideBoundingCollisionModels hideWireframe" )
+    root.createObject( 'PythonScriptController', template='', name="PythonScriptController" , listening="1" , filename="controllerTP1.py" , classname="controller" )
+    root.createObject( 'MechanicalObject', template='Vec3d', name="mObject" , position="0 0 0 10 0 0" , velocity="0 0 0 0 0 0" , force="0 0 0 0 0 0" , rest_position="0 0 0 10 0 0" , externalForce="0 0 0 0 0 0" , reset_position="0 0 0 10 0 0" , showObject="1" , size="2" , topology="@Mesh" )
+    root.createObject( 'MeshTopology', template='', name="Mesh" , position="@mObject.position" , edges="0 1" , drawEdges="1" )
+    root.createObject( 'DefaultAnimationLoop', template='', name="defaultAnimationLoop" )
+    root.createObject( 'DefaultVisualManagerLoop', template='', name="defaultVisualManagerLoop" )
+    root.createObject( 'InteractiveCamera', template='', name="baseCamera" , listening="1" , zNear="0.308221" , zFar="12.2809" , minBBox="-1 -1 -1" , maxBBox="11 1 1" , projectionType="Perspective" , modelViewMatrix="1 0 0 -0 0 1 0 -0 0 0 1 -0 0 0 0 1" , projectionMatrix="1.81066 0 0 0 0 2.41421 0 0 0 0 -1.05149 -0.632311 0 0 -1 0" )
+
+
+    Visual_Node2 = root.createChild( 'Visual' )
+    Visual_Node2.createObject( 'TSphereModel', template='Vec3d', name="Sphere" , color="1 0.5 0 1" , listRadius="1 1" , radius="1" )
