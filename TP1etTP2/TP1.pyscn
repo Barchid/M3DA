@@ -8,8 +8,8 @@ def createScene(rootNode):
     rootNode.createObject('RequiredPlugin', name='SofaPython')
     rootNode.createObject('VisualStyle', displayFlags='showVisualModels hideBehaviorModels showCollisionModels hideBoundingCollisionModels hideForceFields showInteractionForceFields hideWireframe')
 
-    rootNode.findData('gravity').value = "0 9.180 0"
-    dt = 0.001
+    rootNode.findData('gravity').value = "0 0.001 0"
+    dt = 0.005
     rootNode.findData('dt').value = dt
 
 

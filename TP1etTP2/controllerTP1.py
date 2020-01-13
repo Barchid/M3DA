@@ -47,7 +47,7 @@ class controller(Sofa.PythonScriptController):
 
         # Paramétrisation
         self.k = 1500
-        self.m = 0.1 # masse d'une boule
+        self.m = 1 # masse d'une boule
         
         
         # Nombre des

@@ -30,8 +30,8 @@ def createScene(rootNode):
     springs.createObject('Mesh', position='@mObject.position', edges ='0 1 1 2 ', name='Mesh', drawEdges='1')
     
     
-    springs.createObject('MeshSpringForceField', linesStiffness='15')
-    springs.createObject('UniformMass', totalMass='0.3')
+    springs.createObject('MeshSpringForceField', linesStiffness='1000')
+    springs.createObject('UniformMass', totalMass='1000')
     #springs.createObject('FixedConstraint', indices='0')
     springs.createObject('FixedConstraint', indices='0 213')
     
